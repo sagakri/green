@@ -1,0 +1,210 @@
+Ты — fullstack разработчик. Создай полноценное веб-приложение GreenWind AI для хакатона. Приложение анализирует карту Бишкека и рекомендует места для строительства парков и мини-садов.
+
+=== ЦЕЛЬ ПРОЕКТА ===
+Пользователь открывает веб-приложение, видит карту Бишкека и список районов слева. Система анализирует районы по Green Score и показывает, где в городе больше всего не хватает зелени. На карте отображаются проблемные зоны и рекомендованные места для новых парков.
+
+=== СТРУКТУРА ПРИЛОЖЕНИЯ ===
+
+Левая панель (sidebar):
+- Заголовок: GreenWind AI
+- Список районов Бишкека с их Green Score и цветовым индикатором
+- При клике на район — детальный анализ
+- Кнопка "Найти лучшие места для парка"
+- Блок с топ-3 рекомендациями (адрес, причина, приоритет)
+
+Правая часть (карта):
+- OpenStreetMap карта Бишкека (центр: 42.8746, 74.5698, zoom 12)
+- Тепловая раскраска районов по Green Score:
+  красный = score < 30 (критично)
+  оранжевый = score 30-50 (плохо)
+  жёлтый = score 50-70 (средне)
+  зелёный = score > 70 (хорошо)
+- Маркеры на рекомендованных местах для парков
+- Попап при клике: название места, score, рекомендация
+
+=== BACKEND (Python FastAPI) ===
+
+Файл: main.py
+
+1. База данных: SQLite (файл greenwind.db)
+
+Создай таблицы:
+
+CREATE TABLE districts (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  lat REAL,
+  lon REAL,
+  population INTEGER,
+  area_km2 REAL,
+  green_area_m2 REAL,
+  building_density REAL,
+  park_count INTEGER,
+  avg_distance_to_park_m REAL,
+  green_score REAL,
+  level TEXT,
+  recommendation TEXT,
+  polygon_coords TEXT
+);
+
+CREATE TABLE recommendations (
+  id INTEGER PRIMARY KEY,
+  district_id INTEGER,
+  lat REAL,
+  lon REAL,
+  address TEXT,
+  priority INTEGER,
+  reason TEXT,
+  suggested_type TEXT
+);
+
+2. Заполни базу реалистичными данными для 7 районов Бишкека:
+- Первомайский район
+- Свердловский район
+- Октябрьский район
+- Ленинский район
+- Аламединский (пригород)
+- Джал микрорайон
+- Восток-5 микрорайон
+
+Для каждого района задай реалистичные значения:
+population (50000-150000), area_km2, green_area_m2, building_density (0.3-0.8),
+park_count (0-5), avg_distance_to_park_m (200-2000)
+
+3. Алгоритм расчёта Green Score:
+
+def calculate_green_score(district):
+    green_ratio = district.green_area_m2 / (district.area_km2 * 1_000_000)
+    distance_penalty = min(district.avg_distance_to_park_m / 2000, 1.0)
+
+    if district.green_area_m2 > 0:
+        pop_load = min(district.population / district.green_area_m2, 1.0)
+    else:
+        pop_load = 1.0
+
+    score = (
+        green_ratio * 40 +
+        (1 - distance_penalty) * 30 +
+        (1 - district.building_density) * 15 +
+        (1 - pop_load) * 15
+    )
+
+    return round(max(0, min(100, score * 100)), 1)
+
+def get_level(score):
+    if score < 30: return "CRITICAL"
+    if score < 50: return "LOW"
+    if score < 70: return "MEDIUM"
+    return "HIGH"
+
+def get_recommendation(district, score):
+    if score < 30:
+        return "Критический дефицит зелени. Нужен парк площадью минимум 2 га."
+    if score < 50:
+        return "Недостаточно зелени. Рекомендуется 2-3 pocket park по 0.5 га."
+    if score < 70:
+        return "Средний уровень. Добавить мини-сады вдоль улиц."
+    return "Хороший уровень озеленения."
+
+4. API эндпоинты:
+
+GET /api/districts
+→ список всех районов с green_score, level, lat, lon, polygon_coords
+
+GET /api/districts/{id}
+→ детальная информация по району
+
+GET /api/recommendations
+→ топ рекомендаций по всем районам, сортировка по приоритету
+
+GET /api/recommendations/{district_id}
+→ рекомендации для конкретного района
+
+POST /api/recalculate
+→ пересчитать все Green Score и обновить БД
+
+5. CORS:
+Разреши все origins для локальной разработки.
+
+=== FRONTEND (React) ===
+
+Файловая структура:
+src/
+  App.jsx
+  components/
+    Sidebar.jsx
+    DistrictCard.jsx
+    RecommendationCard.jsx
+    Map.jsx
+  styles/
+    App.css
+
+App.jsx:
+- Flexbox layout: sidebar (380px) + map (остальная часть)
+- Тёмная тема: фон #0f172a, карточки #1e293b, текст белый
+- Акцентный цвет: #22c55e
+
+Sidebar.jsx:
+- Логотип и название GreenWind AI с иконкой 🌿
+- Поиск/фильтр районов
+- Список DistrictCard
+- Секция "Топ рекомендации"
+
+DistrictCard.jsx:
+- Название района
+- Круглый индикатор с числом Green Score
+- Цвет по score:
+  красный < 30
+  оранжевый 30-50
+  жёлтый 50-70
+  зелёный > 70
+- Уровень: CRITICAL / LOW / MEDIUM / HIGH
+- Краткая рекомендация
+- Клик → выделяет район на карте
+
+Map.jsx (React-Leaflet):
+- Центр карты: [42.8746, 74.5698], zoom 12
+- Тайлы: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+- Полигоны районов с заливкой по Green Score
+- Маркеры рекомендованных мест:
+  🌳 для парка
+  🌸 для мини-сада
+  🪴 для pocket park
+- Попап при клике на маркер:
+  адрес, тип, приоритет, причина
+
+RecommendationCard.jsx:
+- Адрес места
+- Тип (парк / мини-сад / pocket park)
+- Приоритет (🔴 высокий / 🟡 средний / 🟢 низкий)
+- Причина рекомендации
+- Кнопка "Показать на карте"
+
+=== ДИЗАЙН ===
+Тёмная тема:
+- background: #0f172a
+- sidebar bg: #1e293b
+- card bg: #334155
+- primary green: #22c55e
+- text: #f1f5f9
+- border: #475569
+
+Шрифт: Inter или system-ui
+Карточки с border-radius: 12px и box-shadow
+Анимация hover на карточках
+
+=== ВАЖНО ===
+- Код должен запускаться без ошибок
+- Не сокращай код
+- Используй простую и понятную структуру
+- Сделай так, чтобы MVP можно было показать на хакатоне
+- Используй только open-source карту и простую БД
+- Реализуй логику так, чтобы она была реально рабочей, а не просто заглушкой
+
+=== НАЧНИ ГЕНЕРАЦИЮ С ===
+1. main.py — полный файл с БД, данными и API
+2. App.jsx
+3. Map.jsx
+4. Sidebar.jsx
+5. DistrictCard.jsx
+6. App.css — полные стили
