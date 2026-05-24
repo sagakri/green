@@ -282,9 +282,10 @@ function MapView({
                   </span>
                 </div>
                 {rec.reason && (
-                  <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
-                    {rec.reason}
-                  </p>
+                  <div 
+                    style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: 1.4 }}
+                    dangerouslySetInnerHTML={{ __html: rec.reason }}
+                  />
                 )}
               </div>
             </Popup>
@@ -326,9 +327,10 @@ function MapView({
                   {getTypeLabel(aiRecommendation.suggested_type)}
                 </span>
               </div>
-              <p style={{ fontSize: '12.5px', color: '#334155', margin: 0, lineHeight: 1.5 }}>
-                {aiRecommendation.reason}
-              </p>
+              <div 
+                style={{ fontSize: '13px', color: '#334155', margin: 0, lineHeight: 1.5 }}
+                dangerouslySetInnerHTML={{ __html: aiRecommendation.reason }}
+              />
             </div>
           </Popup>
         </Marker>

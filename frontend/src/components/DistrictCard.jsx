@@ -1,4 +1,4 @@
-function DistrictCard({ district, isSelected, onSelect }) {
+function DistrictCard({ district, isSelected, onSelect, rank }) {
   const score = district.green_score || 0
 
   // Score circle color
@@ -34,12 +34,27 @@ function DistrictCard({ district, isSelected, onSelect }) {
       onClick={() => onSelect(district)}
     >
       <div className="district-card-header">
-        <div>
-          <div className="district-name">{district.name}</div>
-          <div style={{ marginTop: '4px' }}>
-            <span className={`level-badge ${levelInfo.className}`}>
-              {levelInfo.label}
-            </span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+          {rank && (
+            <div style={{
+              background: rank === 1 ? '#ef4444' : rank === 2 ? '#f97316' : rank === 3 ? '#eab308' : '#64748b',
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              marginTop: '2px'
+            }}>
+              #{rank}
+            </div>
+          )}
+          <div>
+            <div className="district-name">{district.name}</div>
+            <div style={{ marginTop: '4px' }}>
+              <span className={`level-badge ${levelInfo.className}`}>
+                {levelInfo.label}
+              </span>
+            </div>
           </div>
         </div>
         <div

@@ -493,6 +493,17 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ── Selection & Focus ───────────────────────────────────────── */
 ::selection {
   background: rgba(34, 197, 94, 0.3);

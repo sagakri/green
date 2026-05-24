@@ -29,16 +29,19 @@ function App() {
       })
   }, [])
 
+  // Fetch all recommendations
+  const fetchRecommendations = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/recommendations?t=${Date.now()}`)
+      setRecommendations(res.data)
+    } catch (err) {
+      console.error('Ошибка загрузки рекомендаций:', err)
+    }
+  }
+
   // Fetch all recommendations on mount
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/api/recommendations`)
-      .then((res) => {
-        setRecommendations(res.data)
-      })
-      .catch((err) => {
-        console.error('Ошибка загрузки рекомендаций:', err)
-      })
+    fetchRecommendations()
   }, [])
 
   // Fetch green zones on mount
@@ -88,6 +91,18 @@ function App() {
     setFlyToLocation({ lat, lon, zoom: 15 })
   }, [])
 
+  // Handle generating dynamic recommendations
+  const handleGenerateRecommendations = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/generate-recommendations`)
+      setRecommendations(res.data)
+      return res.data
+    } catch (err) {
+      console.error('Ошибка генерации рекомендаций:', err)
+      throw err
+    }
+  }
+
   return (
     <div className="app-container">
       <Sidebar
@@ -102,6 +117,8 @@ function App() {
         setShowGreenZones={setShowGreenZones}
         greenZonesCount={greenZones.length}
         setAiRecommendation={setAiRecommendation}
+        onGenerateRecommendations={handleGenerateRecommendations}
+        onAiAnalyzeSuccess={fetchRecommendations}
       />
       <div className="map-container">
         <Map
